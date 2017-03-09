@@ -39,9 +39,10 @@ def icc():
     N = len(df.index)
     nbar = N / a
     n_not = nbar - ((vals.subtract(nbar)).apply(square) / ((a - 1) * N)).sum()
-    up_F = f.ppf(1 - ALPHA / 2, denum_df, num_df)
+    # up_F = f.ppf(1 - ALPHA / 2, denum_df, num_df)
+    up_F_2 = f.ppf(ALPHA / 2, num_df, denum_df)
     f_l = (ms_a / ms_w) / low_F
-    f_u = (ms_a / ms_w) * up_F
+    f_u = (ms_a / ms_w) / up_F_2
     low_ci = (f_l - 1) / (f_l + n_not - 1)
     up_ci = (f_u - 1) / (f_u + n_not - 1)
     result = {
