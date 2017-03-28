@@ -1,3 +1,6 @@
+# TODO: Allow optimization options for ICC or return ICC in Second part, since
+# CI for ICC only calculated with ANOVA anyway.
+
 from flask import Flask, request, jsonify
 from statsmodels.formula.api import ols
 from scipy.stats import f
