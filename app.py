@@ -1,5 +1,4 @@
 # TODO: Do cross-levels
-# TODO: Return Convergence information
 
 import re
 from flask import Flask, request, jsonify
@@ -90,6 +89,7 @@ def r2():
     res_b = model_b.fit(reml=False)
     int_preds = req['int_preds']
     l_one_preds = req['l_one_preds']
+    optim = req['optim']
     eqn_data = create_fit_equation(
         int_preds, l_one_preds, cluster_var, outcome_var, data)
     fit_eqn = eqn_data[0]
@@ -98,9 +98,11 @@ def r2():
     model_f = sm.MixedLM.from_formula(
         fit_eqn, data, groups=data[cluster_var]
     )
-    res_f = model_f.fit(reml=False)
+    optimizers = ['nm', 'powell', 'cg', 'bfgs']
+    res_f = model_f.fit(reml=False, method=optimizers[optim])
+    print(fit_eqn)
     print(res_f.summary())
-    print(res_f.converged)
+    # print(res_f.converged)
     tau_b = res_b.cov_re.groups[0]
     sigma2_b = res_b.scale
     tau_f = res_f.cov_re.groups[0]
@@ -116,6 +118,8 @@ def r2():
     result['varw_f'] = sigma2_f
     result['level_one_r_2'] = level_one_r_2
     result['level_two_r_2'] = level_two_r_2
+    result['convergence_b'] = res_b.converged
+    result['convergence_f'] = res_f.converged
     return jsonify(result)
 
 
