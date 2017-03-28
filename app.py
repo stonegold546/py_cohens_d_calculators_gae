@@ -1,5 +1,3 @@
-# TODO: Do cross-levels
-
 import re
 from flask import Flask, request, jsonify
 from statsmodels.formula.api import ols
@@ -10,6 +8,7 @@ import statsmodels.api as sm
 
 app = Flask(__name__)
 ALPHA = 0.05
+CNT = '_iOxZAnf2FqHrXuxmnXY85Od4hp45C5IoxfptIb10Wj0_'
 
 
 @app.route("/")
@@ -54,7 +53,6 @@ def icc():
         'ICC': icc, 'LowerCI': low_ci, 'UpperCI': up_ci, 'N': a, 'k': k,
         'vara': var_a, 'varw': ms_w
     }
-    # print result
     if method == 'ANOVA':
         return jsonify(result)
     model = sm.MixedLM.from_formula(
@@ -94,15 +92,11 @@ def r2():
         int_preds, l_one_preds, cluster_var, outcome_var, data)
     fit_eqn = eqn_data[0]
     data = eqn_data[1]
-    # print data
     model_f = sm.MixedLM.from_formula(
         fit_eqn, data, groups=data[cluster_var]
     )
     optimizers = ['nm', 'powell', 'cg', 'bfgs']
     res_f = model_f.fit(reml=False, method=optimizers[optim])
-    print(fit_eqn)
-    print(res_f.summary())
-    # print(res_f.converged)
     tau_b = res_b.cov_re.groups[0]
     sigma2_b = res_b.scale
     tau_f = res_f.cov_re.groups[0]
@@ -132,19 +126,13 @@ def del_utf(arg):
 
 
 def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
-    CNT = '_iOxZAnf2FqHrXuxmnXY85Od4hp45C5IoxfptIb10Wj0_'
     for i, value in enumerate(int_preds[0]):
         int_preds[0][i] = del_utf(value.encode('utf-8'))
     for key in l_one_preds.keys():
         temp = l_one_preds[key]
         del l_one_preds[key]
         l_one_preds[del_utf(key.encode('utf-8'))] = temp
-    for key in l_one_preds:
-        l_one_preds[key][0][0] = list(map(
-            (lambda x: del_utf(x.encode('utf-8'))), l_one_preds[key][0][0]))
     int_preds = np.transpose(int_preds)
-    for key in l_one_preds:
-        l_one_preds[key][0] = np.transpose(l_one_preds[key][0])
     int_eqn = []
     for value in int_preds:
         if value[1] == '2':
@@ -153,12 +141,21 @@ def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
         else:
             int_eqn.append(value[0])
     l_one_eqn = []
-    # crosses = []
+    crosses = []
     for key in l_one_preds:
+        # Ensure text is ASCII
+        l_one_preds[key][0][0] = list(map(
+            (lambda x: del_utf(x.encode('utf-8'))), l_one_preds[key][0][0]))
+        # Transposing makes life easy
+        l_one_preds[key][0] = np.transpose(l_one_preds[key][0])
+        l_two_preds = l_one_preds[key][0]
         if l_one_preds[key][1] == 2:
             new_key = key + CNT + '2'
             l_one_eqn.append(new_key)
             data[new_key] = data[key] - data[key].mean()
+            results = cross_ints(new_key, l_two_preds, crosses, data)
+            crosses = results[0]
+            data = results[1]
         elif l_one_preds[key][1] == 1:
             new_key = key + CNT + '1'
             l_one_eqn.append(new_key)
@@ -166,13 +163,38 @@ def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
             c_means = data.groupby(c_var)[key].mean()
             data[new_key] = data.apply(lambda x: x[key] - c_means[x[c_var]],
                                        axis=1)
+            results = cross_ints(new_key, l_two_preds, crosses, data)
+            crosses = results[0]
+            data = results[1]
         else:
             l_one_eqn.append(key)
-    print data.head(n=5)
+            results = cross_ints(key, l_two_preds, crosses, data)
+            crosses = results[0]
+            data = results[1]
     l_one_eqn = ' + '.join(map(str, l_one_eqn))
     int_eqn = ' + '.join(map(str, int_eqn))
-    predictors = [l_one_eqn, int_eqn]
+    crosses = ' + '.join(map(str, crosses))
+    predictors = []
+    if len(l_one_eqn) > 0:
+        predictors.append(l_one_eqn)
+    if len(int_eqn) > 0:
+        predictors.append(int_eqn)
+    if len(crosses) > 0:
+        predictors.append(crosses)
     return [o_var + ' ~ ' + ' + '.join(map(str, predictors)), data]
+
+
+def cross_ints(val_a, l_two_preds, result, data):
+    # Cross-level interactions + insert into data
+    for value in l_two_preds:
+        if value[1] == '0':
+            result.append(val_a + ' : ' + value[0])
+        else:
+            new_val = value[0] + CNT + '2'
+            if new_val not in data:
+                data[new_val] = data[value[0]] - data[value[0]].mean()
+            result.append(val_a + ' : ' + new_val)
+    return([result, data])
 
 
 if __name__ == "__main__":
