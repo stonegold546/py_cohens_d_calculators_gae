@@ -71,11 +71,11 @@ def icc():
 def r2():
     req = request.get_json()
     data = req['data']
-    headers = list(map((lambda x: del_utf(x.encode('utf-8'))), req['headers']))
+    headers = list(map((lambda x: (x.encode('utf-8'))), req['headers']))
     data = pd.DataFrame(data, columns=headers)
-    cluster_var = del_utf(req['cluster_var'].encode('utf-8'))
-    outcome_var = del_utf(req['outcome_var'].encode('utf-8'))
-    null_equation = del_utf(req['null_equation'].encode('utf-8'))
+    cluster_var = (req['cluster_var'].encode('utf-8'))
+    outcome_var = (req['outcome_var'].encode('utf-8'))
+    null_equation = (req['null_equation'].encode('utf-8'))
     a = float(data[cluster_var].nunique())
     temp = data.groupby(cluster_var).count()
     vals = temp[outcome_var]
@@ -130,11 +130,11 @@ def del_utf(arg):
 
 def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
     for i, value in enumerate(int_preds[0]):
-        int_preds[0][i] = del_utf(value.encode('utf-8'))
+        int_preds[0][i] = (value.encode('utf-8'))
     for key in l_one_preds.keys():
         temp = l_one_preds[key]
         del l_one_preds[key]
-        l_one_preds[del_utf(key.encode('utf-8'))] = temp
+        l_one_preds[(key.encode('utf-8'))] = temp
     int_preds = np.transpose(int_preds)
     int_eqn = []
     for value in int_preds:
@@ -148,7 +148,7 @@ def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
     for key in l_one_preds:
         # Ensure text is ASCII
         l_one_preds[key][0][0] = list(map(
-            (lambda x: del_utf(x.encode('utf-8'))), l_one_preds[key][0][0]))
+            (lambda x: (x.encode('utf-8'))), l_one_preds[key][0][0]))
         # Transposing makes life easy
         l_one_preds[key][0] = np.transpose(l_one_preds[key][0])
         l_two_preds = l_one_preds[key][0]
