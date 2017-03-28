@@ -81,6 +81,7 @@ def r2():
     vals = temp[outcome_var]
     vals2 = vals.apply(square)
     k = (1 / (a - 1)) * (vals.sum() - (vals2.sum() / vals.sum()))
+    print(cluster_var, outcome_var, headers)
     print(data.head(5))
     model_b = sm.MixedLM.from_formula(
         null_equation, data, groups=data[cluster_var]
