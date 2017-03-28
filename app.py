@@ -123,9 +123,9 @@ def square(x):
 
 def del_utf(arg):
     try:
-        re.sub(r'[^\x00-\x7F]+', '', arg)
+        return re.sub(r'[^\x00-\x7F]+', '', arg)
     except TypeError:
-        re.sub(b'[^\x00-\x7F]+', '', arg)
+        return re.sub(b'[^\x00-\x7F]+', '', arg)
 
 
 def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
