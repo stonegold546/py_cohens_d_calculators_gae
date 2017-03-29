@@ -60,7 +60,7 @@ def icc():
     model = sm.MixedLM.from_formula(
         'values ~ 1', df, groups=df['clusters']
     )
-    res = model.fit(reml=method)
+    res = model.fit(reml=method, method='nm')
     tau = res.cov_re.groups[0]
     sigma2 = res.scale
     result['vara'] = tau
@@ -88,10 +88,11 @@ def r2():
     model_b = sm.MixedLM.from_formula(
         null_equation, data, groups=data[cluster_var]
     )
-    res_b = model_b.fit(reml=False)
+    optimizers = ['nm', 'powell', 'cg', 'bfgs']
+    optim = req['optim']
+    res_b = model_b.fit(reml=False, method=optimizers[optim])
     int_preds = req['int_preds']
     l_one_preds = req['l_one_preds']
-    optim = req['optim']
     eqn_data = create_fit_equation(
         int_preds, l_one_preds, cluster_var, outcome_var, data)
     fit_eqn = eqn_data[0]
@@ -99,7 +100,6 @@ def r2():
     model_f = sm.MixedLM.from_formula(
         fit_eqn, data, groups=data[cluster_var]
     )
-    optimizers = ['nm', 'powell', 'cg', 'bfgs']
     res_f = model_f.fit(reml=False, method=optimizers[optim])
     tau_b = res_b.cov_re.groups[0]
     sigma2_b = res_b.scale
@@ -118,6 +118,7 @@ def r2():
     result['level_two_r_2'] = level_two_r_2
     result['convergence_b'] = res_b.converged
     result['convergence_f'] = res_f.converged
+    result['ICC'] = tau_b / (tau_b + sigma2_b)
     return jsonify(result)
 
 
