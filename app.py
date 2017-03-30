@@ -4,6 +4,7 @@
 from flask import Flask, request, jsonify
 from statsmodels.formula.api import ols
 from scipy.stats import f
+from scipy.stats import hmean
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -79,10 +80,7 @@ def r2():
     outcome_var = str(req['outcome_var'])
     null_equation = str(req['null_equation'])
     a = float(data[cluster_var].nunique())
-    temp = data.groupby(cluster_var).count()
-    vals = temp[outcome_var]
-    vals2 = vals.apply(square)
-    k = (1 / (a - 1)) * (vals.sum() - (vals2.sum() / vals.sum()))
+    k = np.average(hmean(data.groupby(cluster_var).count()))
     print(cluster_var, outcome_var, headers)
     print(data.head(5))
     model_b = sm.MixedLM.from_formula(
