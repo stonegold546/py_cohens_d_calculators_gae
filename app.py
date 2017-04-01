@@ -16,7 +16,10 @@ CNT = '_iOxZAnf2FqHrXuxmnXY85Od4hp45C5IoxfptIb10Wj0_'
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return "Hi:<br>This application is mostly useful if you're accessing "\
+        "it from <a href='https://effect-size-calculator.herokuapp.com'>"\
+        'effect-size-calculators.herokuapp.com</a>. This repo is the HLM '\
+        "workhorse for that application.<br>Thank you, James Uanhoro."
 
 
 @app.route("/icc", methods=['POST'])
