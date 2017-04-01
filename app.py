@@ -117,6 +117,13 @@ def r2():
     result['convergence_b'] = res_b.converged
     result['convergence_f'] = res_f.converged
     result['ICC'] = tau_b / (tau_b + sigma2_b)
+    base_results = "Base model:\n" + str(res_b.summary())
+    fitted_results = "\nFitted model:\n" + str(res_f.summary())
+    cent_0 = "\nA note about modified variable names\n"
+    cent_1 = CNT + "1 after a variable name signifies group-mean centering;\n"
+    cent_2 = CNT + '2 after a variable name signifies grand-mean centering.'
+    cent = cent_0 + cent_1 + cent_2
+    result['results'] = base_results + fitted_results + cent
     return jsonify(result)
 
 
