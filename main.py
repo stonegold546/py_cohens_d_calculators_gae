@@ -1,6 +1,7 @@
 # TODO: Allow optimization options for ICC or return ICC in Second part, since
 # CI for ICC only calculated with ANOVA anyway.
 
+import logging
 from flask import Flask, request, jsonify
 from statsmodels.formula.api import ols
 from scipy.stats import f
@@ -20,6 +21,12 @@ def hello():
         "it from <a href='https://effect-size-calculator.herokuapp.com'>"\
         'effect-size-calculators.herokuapp.com</a>. This repo is the HLM '\
         "workhorse for that application.<br>Thank you, James Uanhoro."
+
+
+@app.errorhandler(500)
+def server_error(e):
+    logging.exception('An error occurred during a request.')
+    return 'An internal error occurred.', 500
 
 
 @app.route("/icc", methods=['POST'])
