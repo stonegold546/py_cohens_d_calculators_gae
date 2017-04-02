@@ -126,7 +126,8 @@ def r2():
     result['level_two_r_2'] = level_two_r_2
     result['convergence_b'] = res_b.converged
     result['convergence_f'] = res_f.converged
-    result['ICC'] = tau_b / (tau_b + sigma2_b)
+    result['ICC_b'] = tau_b / (tau_b + sigma2_b)
+    result['ICC_f'] = tau_f / (tau_f + sigma2_f)
     base_results = "Base model:\n" + str(res_b.summary())
     fitted_results = "\nFitted model:\n" + str(res_f.summary())
     cent_0 = "\nA note about modified variable names\n"
