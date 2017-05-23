@@ -128,6 +128,20 @@ def r2():
     result['convergence_f'] = res_f.converged
     result['ICC_b'] = tau_b / (tau_b + sigma2_b)
     result['ICC_f'] = tau_f / (tau_f + sigma2_f)
+    try:
+        model_mat = np.matrix(res_f.model.exog)
+        fe = np.matrix(res_f.fe_params)
+        sf = np.var(model_mat * fe.getT())
+        z = model_mat[:, 0]
+        sl = np.sum(np.sum(np.diag(z * tau_f * z.getT()))/model_mat.shape[0])
+        sd = 0
+        total_var = sf + sl + sigma2_f + sd
+        rsq_marg = sf / total_var
+        rsq_cond = (sf + sl) / total_var
+        result['rsq_marg'] = rsq_marg
+        result['rsq_cond'] = rsq_cond
+    except Exception:
+        pass
     base_results = "Base model:\n" + str(res_b.summary())
     fitted_results = "\nFitted model:\n" + str(res_f.summary())
     cent_0 = "\nA note about modified variable names\n"
