@@ -12,7 +12,7 @@ import statsmodels.api as sm
 
 app = Flask(__name__)
 ALPHA = 0.05
-CNT = '_iOxZAnf2FqHrXuxmnXY85Od4hp45C5IoxfptIb10Wj0_'
+CNT = '_efc_centered_'
 
 
 @app.route("/")
