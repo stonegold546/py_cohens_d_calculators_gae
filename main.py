@@ -6,7 +6,6 @@ import requests
 from flask import Flask, request
 from statsmodels.formula.api import ols
 from scipy.stats import f
-from scipy.stats import hmean
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -136,73 +135,55 @@ def r2():
 def r2_background(cluster_var, outcome_var, null_equation, optim, int_preds,
                   l_one_preds, headers, data, channel, url):
     a = float(data[cluster_var].nunique())
-    k = np.average(hmean(data.groupby(cluster_var).count()))
     print(cluster_var, outcome_var, headers)
     print(data.head(5))
-    model_b = sm.MixedLM.from_formula(
-        null_equation, data, groups=data[cluster_var]
-    )
     headers = {'Content-Type': 'application/json'}
-    requests.post(url + '/faye', json={
-        'channel': '/' + channel,
-        'data': {
-            'tasks_to_do': 1, 'tasks_done': 2
-        }
-    }, headers=headers)
     optimizers = ['nm', 'powell', 'cg', 'bfgs']
-    res_b = model_b.fit(reml=False, method=optimizers[optim])
     eqn_data = create_fit_equation(
         int_preds, l_one_preds, cluster_var, outcome_var, data)
     fit_eqn = eqn_data[0]
     data = eqn_data[1]
+    re_eqn = eqn_data[2]
     model_f = sm.MixedLM.from_formula(
-        fit_eqn, data, groups=data[cluster_var]
+        fit_eqn, data, re_formula=re_eqn, groups=data[cluster_var]
     )
-    res_f = model_f.fit(reml=False, method=optimizers[optim])
-    tau_b = res_b.cov_re.groups[0]
-    sigma2_b = res_b.scale
-    tau_f = res_f.cov_re.groups[0]
+    res_f = model_f.fit(reml=True, method=optimizers[optim])
+    # print(res_f.cov_re.iloc[0, 0])
+    tau_f = res_f.cov_re.iloc[0, 0]
     sigma2_f = res_f.scale
     result = {}
-    level_one_r_2 = 1 - ((tau_f+sigma2_f)/(tau_b+sigma2_b))
-    level_two_r_2 = 1 - ((tau_f+(sigma2_f/k))/(tau_b+(sigma2_b/k)))
     result['n'] = a
-    result['k'] = k
-    result['vara_b'] = tau_b
-    result['varw_b'] = sigma2_b
     result['vara_f'] = tau_f
     result['varw_f'] = sigma2_f
-    result['level_one_r_2'] = level_one_r_2
-    result['level_two_r_2'] = level_two_r_2
-    result['convergence_b'] = res_b.converged
     result['convergence_f'] = res_f.converged
-    result['icc_b'] = tau_b / (tau_b + sigma2_b)
     result['icc_f'] = tau_f / (tau_f + sigma2_f)
     try:
         model_mat = np.matrix(res_f.model.exog)
         fe = np.matrix(res_f.fe_params)
         sf = np.var(model_mat * fe.getT())
-        z = model_mat[:, 0]
-        sl = np.sum(np.sum(np.diag(z * tau_f * z.getT()))/model_mat.shape[0])
+        z = np.matrix(res_f.model.exog_re)
+        cov_mat = np.matrix(res_f.cov_re)
+        sl = np.mean(np.diag(np.matmul(np.matmul(z, cov_mat), z.getT())))
         sd = 0
         total_var = sf + sl + sigma2_f + sd
         rsq_marg = sf / total_var
         rsq_cond = (sf + sl) / total_var
+        result['k'] = sl
+        result['icc_f'] = sl / (sl + sigma2_f)
         result['rsq_marg'] = rsq_marg
         result['rsq_cond'] = rsq_cond
     except Exception:
         pass
-    base_results = "Base model:\n" + str(res_b.summary())
-    fitted_results = "\nFitted model:\n" + str(res_f.summary())
+    fitted_results = "Fitted model:\n" + str(res_f.summary())
     cent_0 = "\nA note about modified variable names\n"
     cent_1 = CNT + "1 after a variable name signifies group-mean centering;\n"
     cent_2 = CNT + '2 after a variable name signifies grand-mean centering.'
     cent = cent_0 + cent_1 + cent_2
-    result['results'] = base_results + fitted_results + cent
+    result['results'] = fitted_results + cent
     requests.post(url + '/faye', json={
         'channel': '/' + channel,
         'data': {
-            'tasks_to_do': 2, 'tasks_done': 2, 'result': result
+            'tasks_to_do': 1, 'tasks_done': 1, 'result': result
         }
     }, headers=headers)
     return
@@ -229,6 +210,7 @@ def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
             int_eqn.append(value[0])
     l_one_eqn = []
     crosses = []
+    re_eqn = '1'
     for key in l_one_preds:
         # Ensure text is ASCII
         l_one_preds[key][0][0] = list(map(
@@ -258,6 +240,8 @@ def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
             results = cross_ints(key, l_two_preds, crosses, data)
             crosses = results[0]
             data = results[1]
+        if l_one_preds[key][2] == 1:
+            re_eqn = re_eqn + ' + ' + key
     l_one_eqn = ' + '.join(map(str, l_one_eqn))
     int_eqn = ' + '.join(map(str, int_eqn))
     crosses = ' + '.join(map(str, crosses))
@@ -268,7 +252,8 @@ def create_fit_equation(int_preds, l_one_preds, c_var, o_var, data):
         predictors.append(int_eqn)
     if len(crosses) > 0:
         predictors.append(crosses)
-    return [o_var + ' ~ ' + ' + '.join(map(str, predictors)), data]
+    print(re_eqn)
+    return [o_var + ' ~ ' + ' + '.join(map(str, predictors)), data, re_eqn]
 
 
 def cross_ints(val_a, l_two_preds, result, data):
